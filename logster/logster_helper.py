@@ -43,7 +43,7 @@ class MetricObject(object):
         self.value = value
         self.units = units
         self.type = type
-        self.timestamp = timestamp
+        self.timestamp = int(time())
 
 class LogsterParser(object):
     """Base class for logster parsers"""
@@ -147,4 +147,6 @@ class CloudWatch:
             raise CloudWatchException("Can't connect Amazon CloudWatch server") 
         res = conn.getresponse()
 
-
+class SubmitException(Exception):
+    """Raise this exception if the submit exception."""
+    pass
