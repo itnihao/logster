@@ -10,11 +10,11 @@ class ZbxSend(object):
     '''Send metric to zabbxi server. 
     see zabbix protocol https://www.zabbix.com/documentation/1.8/protocols/agent.'''
 
-    def __init__(self, host, port=10051):
+    def __init__(self, server, port=10051):
         '''Init ZbxSend'''
 
-        self.host   = host
-        self.port   = port
+        self.server = server
+        self.port = port
         self.send_data = ''
         self.zbx_data = { 
             u'request': u'sender data', 
@@ -43,18 +43,31 @@ class ZbxSend(object):
     def send(self):
         '''Send metric data to zabbix server'''
 
+        # set default socket timeout 2s
         socket.setdefaulttimeout(2)
         # package metrics data
         zbx_json = simplejson.dumps(self.zbx_data, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
         self.send_data = 'ZBXD\1' + struct.pack('<Q', len(zbx_json)) + zbx_json
         try:
             zabbix = socket.socket()
-            zabbix.connect((self.host, self.port))
+            zabbix.connect((self.server, self.port))
             zabbix.sendall(self.send_data)
-            resp = zabbix.recv(1024) 
-            if 'success' in resp:
-                return True
-            else:
-                raise SubmitException, "%s %s" %(resp, self.send_data)
+            # get response header
+            resp_header = zabbix.recv(13)
+
+            # check response header
+            if not resp_header.startswith('ZBXD\1') or len(resp_header) != 13:
+                raise SubmitException, "Zabbix response wrong!"
+
+            resp_body_len = struct.unpack('<Q', resp_header[5:])[0]
+            resp_body = zabbix.recv(resp_body_len)
+            zabbix.close()
+
+            resp = simplejson.loads(resp_body)
+            # check response info
+            if resp.get('response') != 'success':
+                raise SubmitException, "Got error from Zabbix: %s" % resp 
+
+            return resp.get('info')
         except Exception, e:
             raise SubmitException, "%s" % e            
