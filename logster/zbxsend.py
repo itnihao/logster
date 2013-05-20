@@ -47,20 +47,20 @@ class ZbxSend(object):
         socket.setdefaulttimeout(2)
         # package metrics data
         zbx_json = simplejson.dumps(self.zbx_data, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
-        self.send_data = 'ZBXD\1' + struct.pack('<Q', len(zbx_json)) + zbx_json
+        self.send_data = struct.pack('<4sBq' + str(len(zbx_json)) + 's', 'ZBXD', 1, len(zbx_json), zbx_json)
         try:
             zabbix = socket.socket()
             zabbix.connect((self.server, self.port))
             zabbix.sendall(self.send_data)
             # get response header
-            resp_header = zabbix.recv(13)
+            resp_header = _recv(zabbix, 13)
 
             # check response header
             if not resp_header.startswith('ZBXD\1') or len(resp_header) != 13:
                 raise SubmitException, "Zabbix response wrong!"
 
-            resp_body_len = struct.unpack('<Q', resp_header[5:])[0]
-            resp_body = zabbix.recv(resp_body_len)
+            resp_body_len = struct.unpack('<q', resp_header[5:])[0]
+            resp_body = _recv(zabbix, resp_body_len)
             zabbix.close()
 
             resp = simplejson.loads(resp_body)
@@ -71,3 +71,12 @@ class ZbxSend(object):
             return resp.get('info')
         except Exception, e:
             raise SubmitException, "%s" % e            
+
+def _recv(sock, count):
+    buf = ''
+    while len(buf)<count:
+        chunk = sock.recv(count-len(buf))
+        if not chunk:
+            return buf
+        buf += chunk
+    return buf
