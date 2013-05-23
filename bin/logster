@@ -19,38 +19,38 @@
 ###  Copyright 2011, Etsy, Inc.
 ###
 ###  This file is part of Logster.
-###  
+###
 ###  Logster is free software: you can redistribute it and/or modify
 ###  it under the terms of the GNU General Public License as published by
 ###  the Free Software Foundation, either version 3 of the License, or
 ###  (at your option) any later version.
-###  
+###
 ###  Logster is distributed in the hope that it will be useful,
 ###  but WITHOUT ANY WARRANTY; without even the implied warranty of
 ###  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 ###  GNU General Public License for more details.
-###  
+###
 ###  You should have received a copy of the GNU General Public License
 ###  along with Logster. If not, see <http://www.gnu.org/licenses/>.
 ###
-###  Forked from the ganglia-logtailer project 
+###  Forked from the ganglia-logtailer project
 ###  (http://bitbucket.org/maplebed/ganglia-logtailer):
 ###    Copyright Linden Research, Inc. 2008
 ###    Released under the GPL v2 or later.
-###    For a full description of the license, please visit 
+###    For a full description of the license, please visit
 ###    http://www.gnu.org/licenses/gpl.txt
 ###
 
 import os
 import sys
-import re 
+import re
 import optparse
 import logging.handlers
-import socket 
+import socket
 import traceback
 import threading
 
-from time import time, strftime, gmtime, sleep
+from time import time, sleep
 
 # Local dependencies
 from logster.logster_helper import LogsterParsingException, SubmitException
@@ -62,32 +62,43 @@ log_dir = "/var/log/logster"
 
 # Command-line options and parsing.
 cmdline = optparse.OptionParser(usage="usage: %prog [options] parser logfile",
-    description="Tail a log file and filter each line to generate metrics that can be sent to common monitoring packages.")
-cmdline.add_option('--metric-prefix', '-p', action='store',
-                    help='Add prefix to all published metrics. This is for people that may multiple instances of same service on same host.',
-                    default='')
-cmdline.add_option('--metric-suffix', '-x', action='store',
-                    help='Add suffix to all published metrics. This is for people that may add suffix at the end of their metrics.',
-                    default=None)
-cmdline.add_option('--parser-help', action='store_true', 
-                    help='Print usage and options for the selected parser')
-cmdline.add_option('--parser-options', action='store', 
-                    help='Options to pass to the logster parser such as "-o VALUE --option2 VALUE". These are parser-specific and passed directly to the parser.')
-cmdline.add_option('--graphite-host', action='store',
-                    help='Hostname and port for Graphite collector, e.g. graphite.example.com:2003')
-cmdline.add_option('--zabbix-server', action='store',
-                    help='Zabbix server Hostname, e.g. zabbix.example.com')
-cmdline.add_option('--zabbix-host', action='store',
-                    help='Zabbix items Host')
-cmdline.add_option('--output', '-o', action='append',
-                   choices=('graphite', 'zabbix', 'stdout'),
-                   help="Where to send metrics (can specify multiple times). Choices are 'graphite', 'zabbix' or 'stdout'.")
-cmdline.add_option('--stdout-separator', action='store', default="_", dest="stdout_separator",
-                    help='Seperator between prefix/suffix and name for stdout. Default is \"%default\".')
-cmdline.add_option('--dry-run', '-d', action='store_true', default=False,
-                    help='Parse the log file but send stats to standard output.')
-cmdline.add_option('--debug', '-D', action='store_true', default=False,
-                    help='Provide more verbose logging for debugging.')
+                                description="Tail a log file and filter each line to generate metrics that can be sent to common monitoring packages.")
+cmdline.add_option(
+    '--metric-prefix', '-p', action='store',
+    help='Add prefix to all published metrics. This is for people that may multiple instances of same service on same host.',
+    default='')
+cmdline.add_option(
+    '--metric-suffix', '-x', action='store',
+    help='Add suffix to all published metrics. This is for people that may add suffix at the end of their metrics.',
+    default=None)
+cmdline.add_option(
+    '--parser-help', action='store_true',
+    help='Print usage and options for the selected parser')
+cmdline.add_option(
+    '--parser-options', action='store',
+    help='Options to pass to the logster parser such as "-o VALUE --option2 VALUE". These are parser-specific and passed directly to the parser.')
+cmdline.add_option(
+    '--graphite-host', action='store',
+    help='Hostname and port for Graphite collector, e.g. graphite.example.com:2003')
+cmdline.add_option(
+    '--zabbix-server', action='store',
+    help='Zabbix server Hostname, e.g. zabbix.example.com')
+cmdline.add_option(
+    '--zabbix-host', action='store',
+    help='Zabbix items Host')
+cmdline.add_option(
+    '--output', '-o', action='append',
+    choices=('graphite', 'zabbix', 'stdout'),
+    help="Where to send metrics (can specify multiple times). Choices are 'graphite', 'zabbix' or 'stdout'.")
+cmdline.add_option(
+    '--stdout-separator', action='store', default="_", dest="stdout_separator",
+    help='Seperator between prefix/suffix and name for stdout. Default is \"%default\".')
+cmdline.add_option(
+    '--dry-run', '-d', action='store_true', default=False,
+    help='Parse the log file but send stats to standard output.')
+cmdline.add_option(
+    '--debug', '-D', action='store_true', default=False,
+    help='Provide more verbose logging for debugging.')
 options, arguments = cmdline.parse_args()
 
 if options.parser_help:
@@ -110,7 +121,7 @@ class_name = arguments[0]
 if class_name.find('.') == -1:
     # If it's a single name, find it in the base logster package
     class_name = 'logster.parsers.%s.%s' % (class_name, class_name)
-log_file   = arguments[1]
+log_file = arguments[1]
 
 
 # Logging infrastructure for use throughout the script.
@@ -132,9 +143,12 @@ if (options.debug):
 ## Danny Yoo (dyoo@hkn.eecs.berkeley.edu)
 ## taken from http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/145297
 import inspect
+
+
 def lineno():
     """Returns the current line number in our program."""
     return inspect.currentframe().f_back.f_lineno
+
 
 class MetricManager(object):
     '''This process should be used to start the thread that calls
@@ -152,20 +166,21 @@ class MetricManager(object):
         while True:
             logger.debug("manager: starting")
             start = time()
-            metrics = parser.get_state() 
+            metrics = parser.get_state()
             # submit the stats
             submit_stats(metrics, self.options)
             finish = time()
             runtime = finish - start
             sleep_time = period - runtime
-            while( sleep_time <= 0 ):
-                logger.info( "manager: calculation time is longer than period.  doubling period to %s." % (period * 2) )
+            while(sleep_time <= 0):
+                logger.info("manager: calculation time is longer than period.  doubling period to %s." % (period * 2))
                 sleep_time += period
                 period *= 2
                 # tell the logtailer class that we're slowing period
                 parser.period = period
-            logger.debug( "manager: sleeping for %s" % sleep_time)
+            logger.debug("manager: sleeping for %s" % sleep_time)
             sleep(sleep_time)
+
 
 def submit_stats(metrics, options):
 
@@ -176,17 +191,19 @@ def submit_stats(metrics, options):
     if 'zabbix' in options.output:
         submit_zabbix(metrics, options)
 
+
 def submit_stdout(metrics, options):
     for metric in metrics:
         if (options.metric_prefix != ""):
             metric.name = options.metric_prefix + options.stdout_separator + metric.name
         if (options.metric_suffix is not None):
             metric.name = metric.name + options.stdout_separator + options.metric_suffix
-        print "%s %s %s" %(metric.timestamp, metric.name, metric.value)
+        print "%s %s %s" % (metric.timestamp, metric.name, metric.value)
+
 
 def submit_graphite(metrics, options):
-    if (re.match("^[\w\.\-]+\:\d+$", options.graphite_host) == None):
-        raise Exception, "Invalid host:port found for Graphite: '%s'" % options.graphite_host
+    if (re.match("^[\w\.\-]+\:\d+$", options.graphite_host) is None):
+        raise Exception("Invalid host:port found for Graphite: '%s'" % options.graphite_host)
 
     if (not options.dry_run):
         host = options.graphite_host.split(':')
@@ -195,15 +212,12 @@ def submit_graphite(metrics, options):
 
     try:
         for metric in metrics:
-    
             if (options.metric_prefix != ""):
                 metric.name = options.metric_prefix + "." + metric.name
             if (options.metric_suffix is not None):
                 metric.name = metric.name + "." + options.metric_suffix
-    
             metric_string = "%s %s %s" % (metric.name, metric.value, metric.timestamp)
-            logger.debug("Submitting Graphite metric: %s" % metric_)
-    
+            logger.debug("Submitting Graphite metric: %s" % metric)
             if (not options.dry_run):
                 s.sendall("%s\n" % metric_string)
             else:
@@ -211,6 +225,7 @@ def submit_graphite(metrics, options):
     finally:
         if (not options.dry_run):
             s.close()
+
 
 def submit_zabbix(metrics, options):
     from logster.zbxsend import ZbxSend
@@ -222,19 +237,20 @@ def submit_zabbix(metrics, options):
         if (options.metric_suffix is not None):
             metric.name = metric.name + "_" + options.metric_suffix
 
-        logger.debug("Submitting Zabbix metrics: %s %s %s" %(options.zabbix_host ,metric.name, metric.value))
+        logger.debug("Submitting Zabbix metrics: %s %s %s" % (options.zabbix_host, metric.name, metric.value))
 
         if (not options.dry_run):
             z.add(options.zabbix_host, str(metric.name), str(metric.value))
         else:
-            print "%s %s" %(metric.name, metric.value)
+            print "%s %s" % (metric.name, metric.value)
 
     try:
         if (not options.dry_run):
             info = z.send()
             logger.info("Submit info: %s" % info)
     except SubmitException, e:
-        logger.error("Submit error: %s" % e) 
+        logger.error("Submit error: %s" % e)
+
 
 def main():
 
@@ -250,7 +266,7 @@ def main():
         input = Tail(log_file)
     except Exception, e:
         # I don't know when this exception will ever actually be triggered.
-        logger.error("Failed to to get log data (line %s): %s" %(lineno(), e))
+        logger.error("Failed to to get log data (line %s): %s" % (lineno(), e))
         sys.exit(1)
 
     # Launch metric caller thread
@@ -263,7 +279,7 @@ def main():
         for line in input:
             try:
                 if not submitter.isAlive():
-                    raise Exception, 'submitter thread died'
+                    raise Exception("submitter thread died")
                 parser.parse_line(line)
             except LogsterParsingException, e:
                 # This should only catch recoverable exceptions (of which there

@@ -6,8 +6,9 @@ import struct
 
 from logster.logster_helper import SubmitException
 
+
 class ZbxSend(object):
-    '''Send metric to zabbxi server. 
+    '''Send metric to zabbxi server.
     see zabbix protocol https://www.zabbix.com/documentation/1.8/protocols/agent.'''
 
     def __init__(self, server, port=10051):
@@ -16,21 +17,21 @@ class ZbxSend(object):
         self.server = server
         self.port = port
         self.send_data = ''
-        self.zbx_data = { 
-            u'request': u'sender data', 
-            u'data':[]
+        self.zbx_data = {
+            u'request': u'sender data',
+            u'data': []
         }
 
-    def add(self, host, key, value, clock = None):
+    def add(self, host, key, value, clock=None):
         '''Add metric data.'''
 
         self.add_data = {
-            u'host': host, 
-            u'key': key, 
+            u'host': host,
+            u'key': key,
             u'value': value
         }
 
-        if clock != None:
+        if clock is None:
             self.zbx_data[u'clock'] = clock
         self.zbx_data['data'].append(self.add_data)
 
@@ -57,7 +58,7 @@ class ZbxSend(object):
 
             # check response header
             if not resp_header.startswith('ZBXD\1') or len(resp_header) != 13:
-                raise SubmitException, "Zabbix response wrong!"
+                raise SubmitException("Zabbix response wrong!")
 
             resp_body_len = struct.unpack('<q', resp_header[5:])[0]
             resp_body = _recv(zabbix, resp_body_len)
@@ -66,15 +67,16 @@ class ZbxSend(object):
             resp = simplejson.loads(resp_body)
             # check response info
             if resp.get('response') != 'success':
-                raise SubmitException, "Got error from Zabbix: %s" % resp 
+                raise SubmitException("Got error from Zabbix: %s" % resp)
 
             return resp.get('info')
         except Exception, e:
-            raise SubmitException, "%s" % e            
+            raise SubmitException("%s" % e)
+
 
 def _recv(sock, count):
     buf = ''
-    while len(buf)<count:
+    while len(buf) < count:
         chunk = sock.recv(count-len(buf))
         if not chunk:
             return buf

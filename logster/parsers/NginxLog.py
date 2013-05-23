@@ -11,6 +11,7 @@ import re
 from logster.logster_helper import MetricObject, LogsterParser
 from logster.logster_helper import LogsterParsingException
 
+
 class NginxLog(LogsterParser):
 
     def __init__(self, option_string=None):
@@ -69,7 +70,7 @@ class NginxLog(LogsterParser):
                 if int(linebits['status']) == 429:
                     self.stat['429'] += 1
                 if int(linebits['status']) == 499:
-                   self.stat['499'] += 1
+                    self.stat['499'] += 1
                 if int(linebits['status']) == 500:
                     self.stat['500'] += 1
                 if int(linebits['status']) == 502:
@@ -85,10 +86,10 @@ class NginxLog(LogsterParser):
                     self.stat['upstream_time'] += float(linebits['upstream_time'])
                 self.stat['upstream_retry'] += len(linebits['upstream_addr'].split()) - 1
             else:
-                raise LogsterParsingException, "regmatch failed to match %s" % line
+                raise LogsterParsingException("regmatch failed to match %s" % line)
         except Exception, e:
             self.lock.release()
-            raise LogsterParsingException, "regmatch or conggtents failed with %s" % e
+            raise LogsterParsingException("regmatch or conggtents failed with %s" % e)
 
         self.lock.release()
 
@@ -144,7 +145,7 @@ class NginxLog(LogsterParser):
         nginx_body_size = MetricObject('nginx_body_size', 0)
         upstream_time = MetricObject('upstream_time', 0)
         if int(mydata['nginx_request']) > 0:
-            nginx_time = MetricObject('nginx_time', float(mydata['nginx_time']) * 1000 / float(mydata['nginx_request'])) 
+            nginx_time = MetricObject('nginx_time', float(mydata['nginx_time']) * 1000 / float(mydata['nginx_request']))
             nginx_body_size = MetricObject('nginx_body_size', float(mydata['nginx_body_size']) / float(mydata['nginx_request']))
         if float(mydata['upstream_request']) > 0:
             upstream_time = MetricObject('upstream_time', float(mydata['upstream_time']) * 1000 / float(mydata['upstream_request']))
